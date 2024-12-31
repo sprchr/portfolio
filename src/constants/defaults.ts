@@ -1,7 +1,9 @@
 // Default values used across the application
 export const DEFAULT_PROFILE = {
   name: 'Sivaprasad Chennareddy',
+
   avatar: 'Profile.jpg',
+
   bio: '',
   location: ''
 } as const;
