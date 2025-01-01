@@ -1,144 +1,91 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { addDoc, collection } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { BlogPost } from '../../../types/blog';
+import AdminLayout from '../shared/AdminLayout';
+import BlogForm from './components/BlogForm';
+import { useBlogEditor } from './hooks/useBlogEditor';
+import LoadingSpinner from '../shared/LoadingSpinner';
 
 export default function BlogEditor() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    excerpt: '',
-    content: '',
-    coverImage: '',
-    tags: ''
-  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { saveBlog, formData, setFormData } = useBlogEditor();
+
+  useEffect(() => {
+    const fetchBlog = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const docRef = doc(db, 'blogs', id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const blog = docSnap.data() as BlogPost;
+          setFormData({
+            title: blog.title,
+            excerpt: blog.excerpt,
+            content: blog.content,
+            coverImage: blog.coverImage,
+            tags: blog.tags.join(', ')
+          });
+        } else {
+          setError('Blog post not found');
+        }
+      } catch (err) {
+        console.error('Error fetching blog:', err);
+        setError('Failed to load blog post');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBlog();
+  }, [id, setFormData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
+    setError(null);
+    
     try {
-      const slug = formData.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-
-      const newPost: Partial<BlogPost> = {
-        title: formData.title,
-        slug,
-        excerpt: formData.excerpt,
-        content: formData.content,
-        coverImage: formData.coverImage,
-        date: new Date().toISOString(),
-        tags: formData.tags.split(',').map(tag => tag.trim()),
-        author: {
-        name: 'Sivaprasad Chennareddy',
-        avatar: 'https://i.ibb.co/vByL0k0/profile.jpg'
-        }
-      };
-
-      await addDoc(collection(db, 'blogs'), newPost);
+      setLoading(true);
+      await saveBlog(id);
       navigate('/admin/blogs');
-    } catch (error) {
-      console.error('Error adding blog post:', error);
+    } catch (err: any) {
+      setError(err.message || 'Failed to save blog post');
     } finally {
       setLoading(false);
     }
   };
 
+  if (loading && id) {
+    return <LoadingSpinner />;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 pt-32 pb-20">
-      <div className="container mx-auto px-6">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">Create New Blog Post</h1>
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Title
-              </label>
-              <input
-                type="text"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Excerpt
-              </label>
-              <textarea
-                required
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                value={formData.excerpt}
-                onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Content (Markdown)
-              </label>
-              <textarea
-                required
-                rows={10}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono"
-                value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cover Image URL
-              </label>
-              <input
-                type="url"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                value={formData.coverImage}
-                onChange={(e) => setFormData({ ...formData, coverImage: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tags (comma-separated)
-              </label>
-              <input
-                type="text"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                value={formData.tags}
-                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-              />
-            </div>
-
-            <div className="flex justify-end gap-4">
-              <button
-                type="button"
-                onClick={() => navigate('/admin/blogs')}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {loading ? 'Creating...' : 'Create Post'}
-              </button>
-            </div>
-          </form>
+    <AdminLayout title={id ? 'Edit Blog Post' : 'Create New Blog Post'}>
+      <div className="max-w-2xl mx-auto">
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+        <div className="bg-white rounded-lg shadow p-6">
+          <BlogForm
+            formData={formData}
+            onChange={setFormData}
+            onSubmit={handleSubmit}
+            onCancel={() => navigate('/admin/blogs')}
+            loading={loading}
+          />
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

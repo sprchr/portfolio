@@ -1,52 +1,77 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { addDoc, collection } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { Tool } from '../../../types/tool';
 import AdminLayout from '../shared/AdminLayout';
 import ToolForm from './components/ToolForm';
+import { useToolEditor } from './hooks/useToolEditor';
+import LoadingSpinner from '../shared/LoadingSpinner';
 
 export default function ToolEditor() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    image: '',
-    demoUrl: '',
-    githubUrl: '',
-    technologies: '',
-    features: ''
-  });
+  const { saveTool, formData, setFormData } = useToolEditor();
+
+  useEffect(() => {
+    const fetchTool = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const docRef = doc(db, 'tools', id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const tool = docSnap.data() as Tool;
+          setFormData({
+            title: tool.title,
+            description: tool.description,
+            image: tool.image,
+            demoUrl: tool.demoUrl || '',
+            githubUrl: tool.githubUrl || '',
+            technologies: tool.technologies.join(', '),
+            features: tool.features.join('\n')
+          });
+        } else {
+          setError('Tool not found');
+        }
+      } catch (err) {
+        console.error('Error fetching tool:', err);
+        setError('Failed to load tool');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTool();
+  }, [id, setFormData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
+    setError(null);
+    
     try {
-      const newTool: Partial<Tool> = {
-        title: formData.title,
-        description: formData.description,
-        image: formData.image,
-        demoUrl: formData.demoUrl || undefined,
-        githubUrl: formData.githubUrl || undefined,
-        technologies: formData.technologies.split(',').map(tech => tech.trim()),
-        features: formData.features.split('\n').filter(feature => feature.trim())
-      };
-
-      await addDoc(collection(db, 'tools'), newTool);
+      setLoading(true);
+      await saveTool(id);
       navigate('/admin/tools');
-    } catch (err) {
-      console.error('Error adding tool:', err);
-      setError('Failed to create tool');
+    } catch (err: any) {
+      setError(err.message || 'Failed to save tool');
     } finally {
       setLoading(false);
     }
   };
 
+  if (loading && id) {
+    return <LoadingSpinner />;
+  }
+
   return (
-    <AdminLayout title="Add New Tool">
+    <AdminLayout title={id ? 'Edit Tool' : 'Add New Tool'}>
       <div className="max-w-2xl mx-auto">
         {error && (
           <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">

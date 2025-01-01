@@ -49,12 +49,22 @@ export default function App() {
                   <BlogEditor />
                 </AdminRoute>
               } />
+              <Route path="/admin/blogs/edit/:id" element={
+                <AdminRoute>
+                  <BlogEditor />
+                </AdminRoute>
+              } />
               <Route path="/admin/tools" element={
                 <AdminRoute>
                   <AdminToolList />
                 </AdminRoute>
               } />
               <Route path="/admin/tools/new" element={
+                <AdminRoute>
+                  <ToolEditor />
+                </AdminRoute>
+              } />
+              <Route path="/admin/tools/edit/:id" element={
                 <AdminRoute>
                   <ToolEditor />
                 </AdminRoute>
