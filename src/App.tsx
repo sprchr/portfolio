@@ -20,59 +20,56 @@ export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen bg-white flex flex-col">
-          <Header />
-          <div className="flex-1">
-            <Routes>
-              <Route path="/" element={
-                <main>
-                  <Hero />
-                  <Contact />
-                </main>
-              } />
-              <Route path="/blog" element={<BlogList />} />
-              <Route path="/blog/:slug" element={<BlogPost />} />
-              <Route path="/tools" element={<ToolsList />} />
-              <Route path="/admin/login" element={<Login />} />
-              <Route path="/admin" element={
-                <AdminRoute>
-                  <Dashboard />
-                </AdminRoute>
-              } />
-              <Route path="/admin/blogs" element={
-                <AdminRoute>
-                  <AdminBlogList />
-                </AdminRoute>
-              } />
-              <Route path="/admin/blogs/new" element={
-                <AdminRoute>
-                  <BlogEditor />
-                </AdminRoute>
-              } />
-              <Route path="/admin/blogs/edit/:id" element={
-                <AdminRoute>
-                  <BlogEditor />
-                </AdminRoute>
-              } />
-              <Route path="/admin/tools" element={
-                <AdminRoute>
-                  <AdminToolList />
-                </AdminRoute>
-              } />
-              <Route path="/admin/tools/new" element={
-                <AdminRoute>
-                  <ToolEditor />
-                </AdminRoute>
-              } />
-              <Route path="/admin/tools/edit/:id" element={
-                <AdminRoute>
-                  <ToolEditor />
-                </AdminRoute>
-              } />
-            </Routes>
-          </div>
-          <Footer />
-        </div>
+        <Routes>
+          {/* Admin Routes */}
+          <Route path="/admin/*" element={
+            <AdminRoute>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/blogs" element={<AdminBlogList />} />
+                <Route path="/blogs/new" element={<BlogEditor />} />
+                <Route path="/blogs/edit/:id" element={<BlogEditor />} />
+                <Route path="/tools" element={<AdminToolList />} />
+                <Route path="/tools/new" element={<ToolEditor />} />
+                <Route path="/tools/edit/:id" element={<ToolEditor />} />
+              </Routes>
+            </AdminRoute>
+          } />
+          <Route path="/admin/login" element={<Login />} />
+
+          {/* Public Routes */}
+          <Route path="/" element={
+            <>
+              <Header />
+              <main>
+                <Hero />
+                <Contact />
+              </main>
+              <Footer />
+            </>
+          } />
+          <Route path="/blog" element={
+            <>
+              <Header />
+              <BlogList />
+              <Footer />
+            </>
+          } />
+          <Route path="/blog/:slug" element={
+            <>
+              <Header />
+              <BlogPost />
+              <Footer />
+            </>
+          } />
+          <Route path="/tools" element={
+            <>
+              <Header />
+              <ToolsList />
+              <Footer />
+            </>
+          } />
+        </Routes>
       </Router>
     </AuthProvider>
   );
